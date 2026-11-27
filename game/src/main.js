@@ -1,6 +1,11 @@
 // main.js — the game loop and state machine. One job: wire every module
 // together (input -> update -> render), own the canvas, and run the game
 // from file:// with zero network requests.
+//
+// Art loads first: nothing is drawn until assets.js has loaded and
+// chroma-keyed every painting, so a staged shot never captures a half
+// painted frame. In shot mode the page then sets window.__shotReady so
+// the screenshot script knows the frame is final.
 (function () {
   'use strict';
   var CFG = window.TR.CFG;
@@ -19,7 +24,7 @@
     turkey: window.TR.Turkey.newTurkey(),
     farmer: window.TR.Farmer.newFarmer(),
     hazards: window.TR.Hazards.newHazards(),
-    scene: { coopX: null, haystackX: null, tableX: null, gateX: null },
+    scene: { haystackX: null, tableX: null, familyW: null },
     shotMode: shotNum > 0,
   };
   G.run.night = window.TR.NIGHTS[0];
@@ -55,31 +60,25 @@
       : window.TR.World.nightDef(s.distance);
     s.night = night;
     var time = s.time;
-    window.TR.Render.sky(ctx, night, time);
-    window.TR.Render.ground(ctx, night);
+    // The painted world: one full-scene painting per night (forest gate
+    // for the staged finale, and for the escape moment in free play too).
+    // No gradients, no code sky any more.
+    var bgName = s.bgOverride || (s.escaped ? 'bg-forest' : null);
+    window.TR.Render.drawBackground(ctx, night, bgName);
 
-    // Night dressing
-    if (s.nightIndex === 0 && G.scene.coopX !== null) window.TR.Render.drawCoop(ctx, G.scene.coopX);
-    if (s.nightIndex === 0 && s.distance < 40) window.TR.Render.drawCoop(ctx, 120);
-    if (s.nightIndex === 1) window.TR.Render.drawBackyardSet(ctx, s, time);
-    if (s.nightIndex === 2 || G.scene.tableX !== null) {
+    // The Thanksgiving family behind their table (Night 3, staged or
+    // when the run passes the table at 700 m) — never once the turkey
+    // has reached the forest gate, staged or played.
+    if ((s.nightIndex === 2 && s.distance < 820) || G.scene.tableX !== null) {
       var tableX = G.scene.tableX !== null ? G.scene.tableX
         : window.TR.World.screenX(700, s.distance);
       if (tableX > -300 && tableX < 1600) {
-        // Family first, table in front: heads above the cloth, bodies hidden
-        // behind it — the turkey sneaks UNDER the table.
-        window.TR.Farmer.drawFamily(ctx, tableX, time);
-        window.TR.Render.drawTable(ctx, tableX, time);
+        window.TR.Farmer.drawFamily(ctx, tableX, time, G.scene.familyW);
       }
     }
-    // Forest gate: finale, or when the run nears 900 m.
-    var gateX = G.scene.gateX !== null ? G.scene.gateX
-      : (s.distance > 820 ? window.TR.World.screenX(900, s.distance) : null);
-    if (gateX !== null && gateX > -200 && gateX < 1500) window.TR.Render.drawGate(ctx, gateX, time);
 
-    // Props + haystacks (in staged shots the scene places its own haystack,
-    // so the world's scrolling ones stay out of the frame).
-    G.world.props.forEach(function (p) { window.TR.Render.drawProp(ctx, p, night, time); });
+    // Haystacks: the world's scrolling ones in free play, the scene's
+    // own one in staged shots.
     if (!G.shotMode) {
       G.world.haystacks.forEach(function (h) {
         window.TR.Render.drawHaystack(ctx, h, time);
@@ -100,17 +99,24 @@
       else window.TR.Hazards.drawTrap(ctx, hz);
     });
 
-    // Farmer + turkey (hidden turkey is inside the haystack: draw a tuft)
-    window.TR.Farmer.drawFarmer(ctx, G.farmer);
-    if (G.turkey.hidden) {
-      ctx.save();
-      ctx.fillStyle = '#e8c85a';
-      ctx.beginPath(); ctx.ellipse(G.turkey.x, CFG.GROUND_Y - 40, 30, 26, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('HIDDEN...', G.turkey.x, CFG.GROUND_Y - 78);
-      ctx.restore();
-    } else {
-      window.TR.Turkey.draw(ctx, G.turkey, time);
+    // Farmer + turkey — hidden on the title screen, where the title
+    // panel + the happy turkey sprite carry the scene (the pair would
+    // otherwise poke out from behind the panel). A hidden turkey is
+    // inside the haystack: draw a tuft.
+    if (s.mode !== 'title') {
+      window.TR.Farmer.drawFarmer(ctx, G.farmer);
+      if (G.turkey.hidden) {
+        ctx.save();
+        ctx.fillStyle = '#e8c85a';
+        ctx.beginPath(); ctx.ellipse(G.turkey.x, CFG.GROUND_Y - 40, 30, 26, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(60,20,5,0.85)'; ctx.lineWidth = 3;
+        ctx.strokeText('HIDDEN...', G.turkey.x, CFG.GROUND_Y - 78);
+        ctx.fillText('HIDDEN...', G.turkey.x, CFG.GROUND_Y - 78);
+        ctx.restore();
+      } else {
+        window.TR.Turkey.draw(ctx, G.turkey, time);
+      }
     }
 
     // HUD + overlays
@@ -199,17 +205,21 @@
     if (!G.shotMode) requestAnimationFrame(frame);
   }
 
-  // Boot: staged shot = pose once and draw; free play = title screen + loop.
-  if (G.shotMode) {
-    window.TR.Shots.applyShot(G, shotNum);
-    G.run.time = G.run.time; // shot times are already set by the scene
-    render();
-    document.getElementById('status').textContent =
-      'Turkey Run staged scene ' + shotNum + ': ' + G.run.night.banner +
-      ' — score ' + Math.floor(G.run.score) + ', ' + G.run.distance + ' m, lives ' + G.run.lives;
-  } else {
-    requestAnimationFrame(frame);
-  }
+  // Boot: wait for the art, then pose the staged shot once (and flag it
+  // ready for the screenshot script) or start the free-play loop.
+  window.TR.Assets.loadAll(function () {
+    if (G.shotMode) {
+      window.TR.Shots.applyShot(G, shotNum);
+      render();
+      document.getElementById('status').textContent =
+        'Turkey Run staged scene ' + shotNum + ': ' + G.run.night.banner +
+        ' — score ' + Math.floor(G.run.score) + ', ' + G.run.distance + ' m, lives ' + G.run.lives;
+      window.__shotReady = true;
+    } else {
+      window.__shotReady = true;
+      requestAnimationFrame(frame);
+    }
+  });
 
   window.TR.Game = G;
 })();

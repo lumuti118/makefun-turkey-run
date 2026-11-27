@@ -16,6 +16,9 @@
       rng: window.TR.makeRng(seed || 20261127),
       seed: seed || 20261127,
       turkeyX: 420,
+      bgOverride: null, // staged shots may force a background (forest gate)
+      bannerOverride: null,
+      endPanelX: null,
     };
   }
 
@@ -47,6 +50,7 @@
     if (s.distance >= CFG.NIGHT_END[2]) {
       s.escaped = true;
       s.mode = 'end';
+      s.nightsCleared = 3; // all three nights survived, gate included
       s.best = 'Escaped in ' + s.clock + ' — ' + s.distance.toFixed(0) + ' m, score ' + Math.floor(s.score);
       window.TR.Audio.escapeJingle();
       window.TR.Audio.stopChase();

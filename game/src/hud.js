@@ -1,6 +1,7 @@
 // hud.js — the HUD (score, distance, lives, night, corn), mission banners,
 // SPOTTED!/CAUGHT!/ESCAPED! alerts, the title screen and the end screens.
-// One job: every pixel of UI text and panels.
+// One job: every pixel of UI text and panels. The title screen is staged
+// over the farmyard painting with the happy turkey sprite beside it.
 (function () {
   'use strict';
   var CFG = window.TR.CFG;
@@ -39,7 +40,7 @@
     ctx.fillStyle = '#f7c873'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left';
     ctx.fillText('SCORE ' + Math.floor(s.score), 32, 40);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(s.distance + ' m', 250, 40);
+    ctx.fillText(Math.floor(s.distance) + ' m', 250, 40);
     ctx.fillStyle = '#ffd23c'; ctx.font = 'bold 18px sans-serif';
     ctx.fillText('CORN ' + s.corn + '/12', 380, 40);
     ctx.fillStyle = '#ffb08a'; ctx.font = 'bold 17px sans-serif';
@@ -69,10 +70,13 @@
       ctx.fillText('SPOTTED!', 640, 196);
       ctx.globalAlpha = 1;
       ctx.fillStyle = '#ffd23c'; ctx.font = 'bold 15px sans-serif';
+      ctx.strokeStyle = 'rgba(60,20,5,0.9)'; ctx.lineWidth = 3;
+      ctx.strokeText('HIDE IN THE HAY  (E)  or OUTRUN HIM!', 640, 226);
       ctx.fillText('HIDE IN THE HAY  (E)  or OUTRUN HIM!', 640, 226);
     }
-    // "CAUGHT — one life lost" flash
-    if (s.caughtFlash > 0) {
+    // "CAUGHT — one life lost" flash (play only: it must not bleed
+    // through the end screen).
+    if (s.caughtFlash > 0 && s.mode === 'play') {
       ctx.globalAlpha = Math.min(0.85, s.caughtFlash / 40);
       panel(ctx, 440, 260, 400, 60, 'rgba(176,30,20,0.9)');
       ctx.fillStyle = '#fff'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
@@ -82,37 +86,42 @@
   }
 
   function drawTitle(ctx, s) {
-    ctx.fillStyle = 'rgba(43,26,16,0.45)';
+    ctx.fillStyle = 'rgba(43,26,16,0.35)';
     ctx.fillRect(0, 0, CFG.W, CFG.H);
-    panel(ctx, 240, 120, 800, 400, 'rgba(43,26,16,0.88)');
+    // The happy turkey, big, just right of the panel.
+    window.TR.Assets.drawSprite(ctx, 'turkey-happy', 1075, 560, 300, true);
+    panel(ctx, 120, 120, 800, 400, 'rgba(43,26,16,0.88)');
     ctx.fillStyle = '#ffd23c'; ctx.font = 'bold 64px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('TURKEY RUN', 640, 205);
+    ctx.fillText('TURKEY RUN', 520, 205);
     ctx.fillStyle = '#ffb08a'; ctx.font = 'bold 26px sans-serif';
-    ctx.fillText('3 NIGHTS TO FREEDOM', 640, 248);
+    ctx.fillText('3 NIGHTS TO FREEDOM', 520, 248);
     ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif';
-    ctx.fillText('Turkey Run: 3 nights, 4 stages, 12 corn, 1 forest gate', 640, 292);
-    ctx.fillText('Escape Thanksgiving dinner — outrun Farmer Jed!', 640, 322);
+    ctx.fillText('Turkey Run: 3 nights, 4 stages, 12 corn, 1 forest gate', 520, 292);
+    ctx.fillText('Escape Thanksgiving dinner — outrun Farmer Jed!', 520, 322);
     ctx.fillStyle = '#f7c873'; ctx.font = 'bold 18px sans-serif';
-    ctx.fillText('ARROWS / WASD — run      SPACE — jump      E — hide in hay', 640, 368);
-    ctx.fillText('Dodge knives, the drum grill, the oven and snare traps.', 640, 396);
-    ctx.fillText('Grab corn for points. 3 lives. Reach the forest gate!', 640, 424);
+    ctx.fillText('ARROWS / WASD — run      SPACE — jump      E — hide in hay', 520, 368);
+    ctx.fillText('Dodge knives, the drum grill, the oven and snare traps.', 520, 396);
+    ctx.fillText('Grab corn for points. 3 lives. Reach the forest gate!', 520, 424);
     var blink = Math.sin(s.time * 0.12) > 0;
     if (blink) {
       ctx.fillStyle = '#ffd23c'; ctx.font = 'bold 26px sans-serif';
-      ctx.fillText('▶  CLICK or press ENTER to start  ◀', 640, 478);
+      ctx.fillText('▶  CLICK or press ENTER to start  ◀', 520, 478);
     }
-    ctx.fillStyle = '#c9a227'; ctx.font = '15px sans-serif';
-    ctx.fillText('Night 1 Farmyard  →  Night 2 Backyard Drum Grill  →  Night 3 Dining Room → Forest Gate', 640, 556);
+    ctx.fillStyle = '#ffd23c'; ctx.font = '15px sans-serif';
+    ctx.strokeStyle = 'rgba(43,26,16,0.9)'; ctx.lineWidth = 3;
+    ctx.strokeText('Night 1 Farmyard  →  Night 2 Backyard Drum Grill  →  Night 3 Dining Room → Forest Gate', 520, 556);
+    ctx.fillText('Night 1 Farmyard  →  Night 2 Backyard Drum Grill  →  Night 3 Dining Room → Forest Gate', 520, 556);
   }
 
   function drawEnd(ctx, s) {
     ctx.fillStyle = s.escaped ? 'rgba(20,60,25,0.5)' : 'rgba(60,10,5,0.55)';
     ctx.fillRect(0, 0, CFG.W, CFG.H);
-    // Staged escape shot shifts the panel left so the turkey + forest gate
-    // stay visible on the right; free play centres it.
+    // Staged escape shot shifts the panel left and narrows it so the
+    // turkey + forest gate stay visible on the right; free play centres it.
     var px = (s.endPanelX !== undefined && s.endPanelX !== null) ? s.endPanelX : 290;
-    var cx = px + 350;
-    panel(ctx, px, 150, 700, 380, 'rgba(43,26,16,0.9)');
+    var pw = (s.endPanelX !== undefined && s.endPanelX !== null) ? 560 : 700;
+    var cx = px + pw / 2;
+    panel(ctx, px, 150, pw, 380, 'rgba(43,26,16,0.9)');
     if (s.escaped) {
       ctx.fillStyle = '#7ac74f'; ctx.font = 'bold 56px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('ESCAPED!', cx, 235);

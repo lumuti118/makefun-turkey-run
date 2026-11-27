@@ -1,8 +1,9 @@
 // A tiny static server for game/ (Node 22, standard library only), so the
 // entry can be played locally without a build step: `node serve.ts` serves
 // game/ on http://localhost:8080. It sends the MIME types a browser game
-// needs, refuses any path outside game/, and otherwise does nothing clever:
-// this is a development convenience, not a web server for the internet.
+// needs (including the painted JPEG art under game/assets/), refuses any
+// path outside game/, and otherwise does nothing clever: this is a
+// development convenience, not a web server for the internet.
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -31,30 +32,39 @@ createServer((request, response) => {
   try {
     pathname = decodeURIComponent(url.pathname);
   } catch {
-    response.writeHead(400).end('bad request');
+    response.writeHead(400);
+    response.end('bad path');
     return;
   }
-  if (pathname.endsWith('/')) pathname += 'index.html';
-  const file = resolve(join(root, normalize(pathname)));
+  // Strip any leading ../ segments before joining, then verify the
+  // resolved file is still inside game/ — never serve outside it.
+  const file = resolve(join(root, normalize(pathname).replace(/^(\.\.(\/|\\|$))+/, '')));
   if (file !== root && !file.startsWith(root + sep)) {
-    response.writeHead(403).end('forbidden');
+    response.writeHead(403);
+    response.end('outside game/');
     return;
   }
-  let size;
+  let target = file;
   try {
-    const stats = statSync(file);
-    if (!stats.isFile()) throw new Error('not a file');
-    size = stats.size;
+    const st = statSync(target);
+    if (st.isDirectory()) target = join(target, 'index.html');
   } catch {
-    response.writeHead(404).end('not found');
+    response.writeHead(404);
+    response.end('not found');
     return;
   }
-  response.writeHead(200, {
-    'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream',
-    'content-length': size,
-    'cache-control': 'no-store',
-  });
-  createReadStream(file).pipe(response);
-}).listen(port, '127.0.0.1', () => {
-  console.log(`game/ is on http://localhost:${port}`);
+  try {
+    const st = statSync(target);
+    if (!st.isFile()) throw new Error('not a file');
+    response.writeHead(200, {
+      'content-type': MIME[extname(target)] ?? 'application/octet-stream',
+      'content-length': st.size,
+    });
+    createReadStream(target).pipe(response);
+  } catch {
+    response.writeHead(404);
+    response.end('not found');
+  }
+}).listen(port, () => {
+  console.log(`Turkey Run serving game/ at http://localhost:${port}`);
 });

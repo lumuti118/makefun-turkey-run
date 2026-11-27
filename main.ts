@@ -6,8 +6,12 @@
 // byte-identical output.
 //
 // The game is plain static files a desktop browser loads offline:
-// game/index.html plus twelve classic scripts under game/src/ (no modules,
+// game/index.html plus thirteen classic scripts under game/src/ (no modules,
 // no build step), so it opens straight from file:// as well as from a server.
+// The art is nine painted files under game/assets/ (four full-scene JPG
+// backgrounds, five chroma-keyed PNG character sprites with real alpha) —
+// local files only, loaded by relative path, zero network requests at
+// run time.
 //
 // Serve the game locally first with `node serve.ts`, then open
 // http://localhost:8080. Outside the grader's container, MAKEFUN_OUTPUT_DIR
@@ -22,16 +26,16 @@ import { buildDossier } from './vendor/makefun-game.ts';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
-// Layout guard: the game must be the twelve classic scripts under game/src/
-// loaded by game/index.html — a module tag would be blocked from file://,
-// so fail the build here, not at grading.
+// Layout guard: the game must be the thirteen classic scripts under
+// game/src/ loaded by game/index.html — a module tag would be blocked from
+// file://, so fail the build here, not at grading.
 const expectedScripts = [
-  'config.js', 'input.js', 'audio.js', 'world.js', 'turkey.js', 'farmer.js',
+  'config.js', 'assets.js', 'input.js', 'audio.js', 'world.js', 'turkey.js', 'farmer.js',
   'hazards.js', 'render.js', 'hud.js', 'missions.js', 'shots.js', 'main.js',
 ];
 for (const name of expectedScripts) {
   if (!existsSync(join(here, 'game', 'src', name))) {
-    throw new Error(`missing game/src/${name} — the twelve-script layout is incomplete`);
+    throw new Error(`missing game/src/${name} — the thirteen-script layout is incomplete`);
   }
 }
 const entryHtml = readFileSync(join(here, 'game', 'index.html'), 'utf8');
@@ -40,6 +44,25 @@ if (entryHtml.includes('type="module"')) {
 }
 if (!entryHtml.includes('<script src="./src/main.js">')) {
   throw new Error('game/index.html does not load ./src/main.js as a classic script');
+}
+if (!entryHtml.includes('<script src="./src/assets.js">')) {
+  throw new Error('game/index.html does not load ./src/assets.js — the painted art would never load');
+}
+
+// Art guard: the nine painted assets the game loads by relative path.
+// Backgrounds are JPG paintings; sprites are PNGs with a true alpha
+// channel (the magenta key was removed at asset-build time — see
+// game/src/assets.js — because file:// canvas is tainted and runtime
+// keying throws in desktop Chrome).
+const expectedAssets = [
+  'bg-farmyard.jpg', 'bg-grill.jpg', 'bg-dining.jpg', 'bg-forest.jpg',
+  'turkey-panic.png', 'turkey-happy.png', 'farmer-jed.png', 'family-table.png',
+  'drum-grill.png',
+];
+for (const name of expectedAssets) {
+  if (!existsSync(join(here, 'game', 'assets', name))) {
+    throw new Error(`missing game/assets/${name} — a painted asset is gone`);
+  }
 }
 
 mkdirSync(out, { recursive: true });

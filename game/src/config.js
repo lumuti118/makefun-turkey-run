@@ -36,11 +36,13 @@
   // The world: coop -> farmyard -> BACKYARD DRUM-GRILL (Night 2) ->
   // dining room -> forest gate. Night 2 is OUTDOORS, a real-life
   // Thanksgiving backyard: the cooking happens outside on a big oil-drum
-  // BBQ smoker, not in an indoor kitchen.
+  // BBQ smoker, not in an indoor kitchen. Each night has its own painted
+  // background (game/assets/bg-*.jpg); the forest gate is the finale shot.
   var NIGHTS = [
     {
       n: 1, name: 'NIGHT 1', title: 'ESCAPE THE FARMYARD',
-      place: 'Farmyard', sky: '#f7c873', skyTop: '#e8955a',
+      place: 'Farmyard', bg: 'bg-farmyard',
+      sky: '#f7c873', skyTop: '#e8955a',
       ground: '#c98f4e', groundDark: '#a96f33',
       banner: 'NIGHT 1 — ESCAPE THE FARMYARD',
       intro: 'The farmer is coming. Run, little turkey, run!',
@@ -48,7 +50,8 @@
     },
     {
       n: 2, name: 'NIGHT 2', title: 'THE BACKYARD DRUM GRILL',
-      place: 'Backyard Grill', sky: '#f2a65e', skyTop: '#d96f3c',
+      place: 'Backyard Grill', bg: 'bg-grill',
+      sky: '#f2a65e', skyTop: '#d96f3c',
       ground: '#b57a3d', groundDark: '#8f5c28',
       banner: 'NIGHT 2 — DODGE THE DRUM GRILL',
       intro: 'Thanksgiving dinner is cooking OUTSIDE. Dodge the drum grill!',
@@ -56,7 +59,8 @@
     },
     {
       n: 3, name: 'NIGHT 3', title: 'THE GREAT ESCAPE',
-      place: 'Dining Room', sky: '#e08a4e', skyTop: '#b4502e',
+      place: 'Dining Room', bg: 'bg-dining',
+      sky: '#e08a4e', skyTop: '#b4502e',
       ground: '#7d4a26', groundDark: '#5f3517',
       banner: 'NIGHT 3 — THE GREAT ESCAPE',
       intro: 'Past the Thanksgiving table — the forest gate is ahead!',

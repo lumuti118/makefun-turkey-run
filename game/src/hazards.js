@@ -1,10 +1,15 @@
 // hazards.js — the dangers: falling carving knives, the BIG DRUM GRILL
-// (oil-drum BBQ smoker — Night 2's centerpiece: rusty drum on legs, smoke,
-// glowing coals, flare-ups), the farmhouse oven, and snare traps.
-// Also owns corn pickup collision. One job: hazards + their hits.
+// (oil-drum BBQ smoker — Night 2's centerpiece, a real painted sprite
+// from game/assets/drum-grill.jpg, chroma-keyed by assets.js), the
+// farmhouse oven, and snare traps. Also owns corn pickup collision.
+// One job: hazards + their hits. Flare-up flames and smoke are drawn in
+// code over the grill sprite so they stay animated while it sits still.
 (function () {
   'use strict';
   var CFG = window.TR.CFG;
+
+  // Draw width of the drum-grill sprite on screen.
+  var GRILL_W = 210;
 
   function newHazards() {
     return { list: [], spawnTimer: 120, flare: 0 };
@@ -82,102 +87,96 @@
     ctx.save();
     ctx.translate(hz.x, hz.y);
     ctx.rotate(Math.sin(hz.spin) * 0.25);
-    // Blade
+    // Blade with a shine line
     ctx.fillStyle = '#dfe6ea';
     ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(11, -8); ctx.lineTo(9, 18); ctx.lineTo(-9, 18); ctx.lineTo(-11, -8); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#8a979e'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-3, -26); ctx.lineTo(-6, 10); ctx.stroke();
     // Handle
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(-8, 18, 16, 16);
+    ctx.fillStyle = '#c9a227';
+    ctx.fillRect(-8, 18, 16, 3);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(60,20,5,0.8)'; ctx.lineWidth = 3;
+    ctx.strokeText('CARVING KNIFE', 0, -42);
     ctx.fillText('CARVING KNIFE', 0, -42);
     ctx.restore();
   }
 
-  // The drum grill: a big rusty oil drum on legs, lid ajar, glowing coals
-  // inside, smoke curling up, occasional flare-up. The Night 2 centerpiece.
+  // The drum grill: painted sprite, with code-drawn flare-up flames and
+  // drifting smoke on top so it stays alive. The sprite's own height is
+  // taller than the hitbox (smoke + chimney), so it is drawn bottom-up.
   function drawGrill(ctx, hz, time) {
+    var gh = window.TR.Assets.spriteHeight('drum-grill', GRILL_W);
     ctx.save();
     ctx.translate(hz.x, hz.y);
-    // Legs
-    ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 7; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-44, -18); ctx.lineTo(-52, 0); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(44, -18); ctx.lineTo(52, 0); ctx.stroke();
-    // Drum body — a HORIZONTAL rusty oil drum (barrel on its side),
-    // wider than tall, with a round end cap facing the viewer.
-    ctx.fillStyle = '#7a4a22';
-    ctx.beginPath(); ctx.ellipse(0, -52, 78, 40, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#8f5a2a';
-    ctx.beginPath(); ctx.ellipse(-6, -56, 68, 33, 0, 0, Math.PI * 2); ctx.fill();
-    // Round end cap (right end of the barrel)
-    ctx.fillStyle = '#6b3d1c';
-    ctx.beginPath(); ctx.ellipse(66, -52, 14, 38, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#4a2c10'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.ellipse(66, -52, 14, 38, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(66, -52, 6, 16, 0, 0, Math.PI * 2); ctx.stroke();
-    // Rust patches
-    ctx.fillStyle = '#5f3517';
-    ctx.beginPath(); ctx.ellipse(-28, -40, 14, 8, 0.4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(30, -70, 12, 7, -0.3, 0, Math.PI * 2); ctx.fill();
-    // Metal bands around the barrel
-    ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.ellipse(-30, -52, 10, 40, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(30, -52, 10, 40, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-    // Open top: glowing coals + grill grate
-    ctx.fillStyle = '#2b1508';
-    ctx.beginPath(); ctx.ellipse(0, -84, 52, 12, 0, 0, Math.PI * 2); ctx.fill();
-    var glow = 0.6 + Math.sin(time * 0.12 + hz.smokeSeed) * 0.25 + hz.flare * 0.4;
-    ctx.fillStyle = 'rgba(255,' + (100 + (glow * 90 | 0)) + ',20,' + Math.min(1, glow) + ')';
-    ctx.beginPath(); ctx.ellipse(-18, -84, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(8, -84, 14, 6, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(30, -84, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
-    // Flare-up flames
+    // Ground shadow
+    ctx.fillStyle = 'rgba(60,30,10,0.30)';
+    ctx.beginPath(); ctx.ellipse(0, 4, 78, 9, 0, 0, Math.PI * 2); ctx.fill();
+    var ok = window.TR.Assets.drawSprite(ctx, 'drum-grill', 0, 0, GRILL_W, false);
+    if (!ok) {
+      ctx.fillStyle = '#7a4a22';
+      ctx.beginPath(); ctx.ellipse(0, -52, 78, 40, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    // Flare-up flames licking out of the open top (barrel mouth ~ -gh*0.62).
     if (hz.flare > 0.3) {
-      ctx.fillStyle = 'rgba(255,150,20,0.9)';
-      var fh = 30 + hz.flare * 50;
+      var fy = -gh * 0.60;
+      var fh = 26 + hz.flare * 46;
+      ctx.fillStyle = 'rgba(255,150,20,0.92)';
       ctx.beginPath();
-      ctx.moveTo(-26, -88); ctx.quadraticCurveTo(-14, -88 - fh, 0, -88);
-      ctx.quadraticCurveTo(14, -88 - fh, 26, -88); ctx.closePath(); ctx.fill();
+      ctx.moveTo(-30, fy); ctx.quadraticCurveTo(-16, fy - fh, 0, fy);
+      ctx.quadraticCurveTo(16, fy - fh, 30, fy); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#ffd23c';
       ctx.beginPath();
-      ctx.moveTo(-12, -88); ctx.quadraticCurveTo(0, -88 - fh * 0.6, 12, -88); ctx.closePath(); ctx.fill();
+      ctx.moveTo(-13, fy); ctx.quadraticCurveTo(0, fy - fh * 0.6, 13, fy); ctx.closePath(); ctx.fill();
     }
-    // Smoke curls
-    ctx.fillStyle = 'rgba(200,200,200,0.55)';
+    // Smoke curls above the chimney
+    ctx.fillStyle = 'rgba(220,220,220,0.5)';
     for (var i = 0; i < 3; i++) {
-      var sy = -110 - ((time * 0.5 + hz.smokeSeed * 20 + i * 34) % 100);
-      var sx = Math.sin(time * 0.03 + i * 2 + hz.smokeSeed) * 14;
-      ctx.beginPath(); ctx.arc(sx, sy, 10 + i * 4, 0, Math.PI * 2); ctx.fill();
+      var sy = -gh - 10 - ((time * 0.5 + hz.smokeSeed * 20 + i * 34) % 90);
+      var sx = Math.sin(time * 0.03 + i * 2 + hz.smokeSeed) * 12 + 40;
+      ctx.beginPath(); ctx.arc(sx, sy, 9 + i * 4, 0, Math.PI * 2); ctx.fill();
     }
-    // Chimney pipe
-    ctx.fillStyle = '#5a5a5a';
-    ctx.fillRect(44, -128, 12, 46);
     // Label callout (judge-facing annotation, allowed by the rules)
     ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
-    ctx.strokeStyle = 'rgba(60,20,5,0.8)'; ctx.lineWidth = 3;
-    ctx.strokeText('DRUM GRILL: dodge the flare-ups!', 0, -150);
-    ctx.fillText('DRUM GRILL: dodge the flare-ups!', 0, -150);
+    ctx.strokeStyle = 'rgba(60,20,5,0.85)'; ctx.lineWidth = 3;
+    ctx.strokeText('DRUM GRILL: dodge the flare-ups!', 0, -gh - 96);
+    ctx.fillText('DRUM GRILL: dodge the flare-ups!', 0, -gh - 96);
     ctx.restore();
   }
 
   function drawOven(ctx, hz, time) {
     ctx.save();
     ctx.translate(hz.x, hz.y);
-    ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(-52, -130, 104, 130);
-    ctx.fillStyle = '#565656';
+    // Body with rounded top corners and a hot glow — warm grey-brown so
+    // it reads against the painted world instead of a black slab.
+    ctx.fillStyle = '#4d4a45';
+    ctx.beginPath(); ctx.roundRect(-52, -130, 104, 130, 8); ctx.fill();
+    ctx.strokeStyle = '#2b2825'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#6a655e';
     ctx.fillRect(-46, -124, 92, 34);
+    ctx.fillStyle = 'rgba(255,220,150,0.25)';
+    ctx.fillRect(-46, -124, 92, 8);
     // Glowing oven window
     var g = 0.55 + hz.heat * 0.45;
     ctx.fillStyle = 'rgba(255,' + (120 + (g * 100 | 0)) + ',30,' + g + ')';
     ctx.fillRect(-38, -82, 76, 46);
+    ctx.fillStyle = 'rgba(255,220,120,0.85)';
+    ctx.fillRect(-38, -82, 76, 8);
     ctx.fillStyle = '#222';
     ctx.fillRect(-38, -82, 76, 6);
+    ctx.fillRect(-38, -42, 76, 6);
     // Knobs + handle
     ctx.fillStyle = '#dfe6ea';
     [-28, 0, 28].forEach(function (kx) { ctx.beginPath(); ctx.arc(kx, -106, 6, 0, Math.PI * 2); ctx.fill(); });
+    ctx.strokeStyle = '#8a979e'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-46, -88); ctx.lineTo(46, -88); ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(60,20,5,0.85)'; ctx.lineWidth = 3;
+    ctx.strokeText('OVEN: dodge the blast', 0, -142);
     ctx.fillText('OVEN: dodge the blast', 0, -142);
     ctx.restore();
   }
@@ -185,11 +184,16 @@
   function drawTrap(ctx, hz) {
     ctx.save();
     ctx.translate(hz.x, hz.y);
-    ctx.strokeStyle = '#6b4a1a'; ctx.lineWidth = 4;
+    // Snare: brass ring + coiled rope on the ground
+    ctx.strokeStyle = '#8a6d1a'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.ellipse(0, -8, 34, 12, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#6b4a1a'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.ellipse(0, -8, 34, 12, 0, 0, Math.PI); ctx.stroke();
     ctx.fillStyle = '#c9a227';
     ctx.beginPath(); ctx.arc(0, -12, 6, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(60,20,5,0.8)'; ctx.lineWidth = 3;
+    ctx.strokeText('SNARE TRAP', 0, -28);
     ctx.fillText('SNARE TRAP', 0, -28);
     ctx.restore();
   }
@@ -198,6 +202,9 @@
     if (c.taken) return;
     ctx.save();
     ctx.translate(c.x, c.y + Math.sin(time * 0.08 + c.d) * 3);
+    // Glow so the cob reads at a glance
+    ctx.fillStyle = 'rgba(242,194,48,0.25)';
+    ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#f2c230';
     ctx.beginPath(); ctx.ellipse(0, 0, 10, 18, 0.3, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#d9a41e';
@@ -213,5 +220,6 @@
     newHazards: newHazards, spawn: spawn, update: update, hitTest: hitTest,
     drawKnife: drawKnife, drawGrill: drawGrill, drawOven: drawOven,
     drawTrap: drawTrap, drawCorn: drawCorn,
+    GRILL_W: GRILL_W,
   };
 })();
