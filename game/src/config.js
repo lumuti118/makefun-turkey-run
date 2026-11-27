@@ -24,7 +24,10 @@
     // Night lengths in metres; reaching the end of Night 3 = the forest gate.
     NIGHT_END: [300, 650, 900],
     // Farmer base speed per night (m/s of screen chase); he gets faster.
-    FARMER_SPEED: [1.8, 2.4, 3.0],
+    // Option A (27 Nov 2026, Bos): [1.2, 1.6, 2.0] — the survival bot
+    // escapes at these speeds (1:04, 12/12 corn, 1 life left); the shipped
+    // [1.8, 2.4, 3.0] was unwinnable (best bot died at ~112 m).
+    FARMER_SPEED: [1.2, 1.6, 2.0],
     // Hazard spawn gap (frames) per night; smaller = denser.
     HAZARD_GAP: [110, 85, 65],
     CORN_PER_NIGHT: 4,
