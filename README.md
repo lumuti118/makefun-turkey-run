@@ -66,9 +66,13 @@ Deterministic staged screenshot scenes: `?shot=1&seed=1` (Night 1 mid-run
 cover), `?shot=2&seed=1` (Night 2 backyard drum grill), `?shot=3&seed=1`
 (Night 3 past the dining table), `?shot=4&seed=1` (the forest-gate escape).
 The four screenshots are staged scenes rendered live by the game code, with
-coherent numbers across them (0:38 / 240 pts / 120 m / 3 lives → 1:24 / 610 /
-340 m / 2 lives → 2:10 / 980 / 620 m / 2 lives → 2:47 / 1350 / 900 m /
-2 lives) — not a recording of one played run.
+numbers from the real rules at each distance (frame-audit 27 Nov 2026:
+0:08 / 73 pts / 120 m / 3 lives → 0:24 / 415 / 340 m / 2 lives → 0:49 /
+834 / 700 m / 2 lives → 1:04 / 1023 / 900 m / 2 lives) — not a recording
+of one played run. NOTE: the live game at shipped farmer speeds cannot
+survive past ~112 m, so these are what the rules say a run at each
+distance scores, not states a live run can reach yet — see
+game/src/shots.js for the audit note.
 
 ## Structure
 
